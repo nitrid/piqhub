@@ -1,0 +1,49 @@
+.top-bar
+{
+    position: fixed;
+    right: 0;
+    left: 0;
+    z-index: 1500;
+}
+.main-toolbar
+{
+    background-color: #ecf0f1;
+    padding: 5px 10px;
+    border-bottom: 1px solid #bdc3c7
+}
+.dx-drawer-panel-content
+{
+    background-color:#ecf0f1;
+    border-right: 1px solid #bdc3c7;
+}
+.main-drawer
+{
+    padding-top: 46px;
+}
+.dx-tabpanel-tabs
+{
+    height:fit-content;
+}
+.dx-tab-content .dx-icon.dx-icon-close {
+    display: inline-block;
+    opacity: 0.6;
+    margin-right: 0;
+    margin-left: 7px;
+    font-size: 12px;
+}
+.dx-checkbox-container
+{
+    height: fit-content;
+}
+.dx-layout-manager
+{
+    height: fit-content;
+}
+.dx-form-group-content
+{
+    height: fit-content;
+}
+.form-label-bold
+{
+    font-weight: 500;
+}
