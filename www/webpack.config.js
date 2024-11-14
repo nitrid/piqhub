@@ -68,12 +68,12 @@ module.exports =
         {
             "/socket.io": 
             {
-                target: 'http://localhost',
+                target: 'http://localhost:81',
                 ws: true
             },
             "/api": 
             {  // API istekleri için proxy ekle
-                target: 'http://localhost',
+                target: 'http://localhost:81',
                 secure: false
             }
         },
