@@ -7,6 +7,6 @@ export default
 	trustedConnection : false,
 	debug: false,
 	db_path: "C:\\Data",
-	port: "81",
+	port: "80",
 	hostPath: "/www/public"
 }
