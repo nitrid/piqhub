@@ -42,10 +42,10 @@ export default class licenceCard extends React.Component
         }
         this.dataObj.updateCmd = 
         {
-            query: `UPDATE LICENCE SET LUSER = @LUSER, LDATE = @LDATE, CUSTOMER = @CUSTOMER, LICENCE = @LICENCE, SETUP_DATE = @SETUP_DATE, 
-                    START_DATE = @START_DATE, FINISH_DATE = @FINISH_DATE, RENT = @RENT, CLOUD = @CLOUD, STATUS = @STATUS WHERE MACID = @MACID`,
-            param: ['LUSER:string|25', 'LDATE:datetime', 'CUSTOMER:string|50', 'LICENCE:string|max', 'SETUP_DATE:date', 'START_DATE:date', 
-                    'FINISH_DATE:date', 'RENT:bit', 'CLOUD:bit', 'STATUS:bit','MACID:string|50']
+            query: `UPDATE LICENCE SET LUSER = @LUSER, LDATE = @LDATE, MACID = @MACID, CUSTOMER = @CUSTOMER, LICENCE = @LICENCE, SETUP_DATE = @SETUP_DATE, 
+                    START_DATE = @START_DATE, FINISH_DATE = @FINISH_DATE, RENT = @RENT, CLOUD = @CLOUD, STATUS = @STATUS WHERE GUID = @GUID`,
+            param: ['LUSER:string|25', 'LDATE:datetime','MACID:string|50', 'CUSTOMER:string|50', 'LICENCE:string|max', 'SETUP_DATE:date', 'START_DATE:date', 
+                    'FINISH_DATE:date', 'RENT:bit', 'CLOUD:bit', 'STATUS:bit', 'GUID:string|50']
         }
     }
     async componentDidMount()
