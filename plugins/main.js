@@ -1,6 +1,6 @@
 import {core} from 'gensrv'
 import {menuOff} from './menu/menuOff.js'
-
+import moment from 'moment'
 class main
 {
     constructor()
@@ -49,6 +49,32 @@ class main
                     console.error(tmpResult.result.err)
                     pCallback(null)
                 }
+            }
+        })
+        pSocket.on('piqhub-set-info',async (pParam,pCallback) =>
+        {
+            if(typeof pParam.macid != 'undefined')
+            {
+                console.log(pParam)
+                let tmpQuery = 
+                {
+                    query: `UPDATE LICENCE SET VERSION = @VERSION,REQUEST_DATE = @REQUEST_DATE WHERE MACID = @MACID AND STATUS = 1 AND DELETED = 0`,
+                    param: ['VERSION:string|50','REQUEST_DATE:datetime','MACID:string|50'],
+                    value: [pParam.version || '',moment(new Date()).format("YYYY-MM-DD HH:mm:ss"),pParam.macid]
+                }
+
+                let tmpResult = await this.core.sql.execute(tmpQuery)
+                
+                if(tmpResult.result.err)
+                {
+                    console.error("Lisans bilgisi güncellenirken hata:",tmpResult.result.err)
+                    pCallback({success:false,error:tmpResult.result.err})
+                    return
+                }
+            }
+            else
+            {
+                console.error("MACID bilgisi eksik")
             }
         })
     }
