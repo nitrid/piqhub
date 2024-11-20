@@ -18,6 +18,12 @@ export const menu = (e) =>
                     path: 'licenceList.js'
                 }
             ]
+        },
+        {
+            id: 'watch',
+            text: "İzleme",
+            expanded: false,
+            path: 'watchList.js'
         }
     ]
 }

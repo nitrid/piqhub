@@ -2,8 +2,6 @@ import React from 'react';
 import App from '../lib/app.js';
 import Form, { Label, Item, EmptyItem } from 'devextreme-react/form';
 import NdTextBox, { Validator, NumericRule, RequiredRule, CompareRule, EmailRule, PatternRule, StringLengthRule, RangeRule, AsyncRule } from '../core/react/devex/textbox.js';
-import NdSelectBox from '../core/react/devex/selectbox.js';
-import NdNumberBox from '../core/react/devex/numberbox.js';
 import NdButton from '../core/react/devex/button.js';
 import NdCheckBox from '../core/react/devex/checkbox.js';
 import ScrollView from 'devextreme-react/scroll-view';

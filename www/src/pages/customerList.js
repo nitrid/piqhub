@@ -1,13 +1,8 @@
 import React from 'react';
 import App from '../lib/app.js';
 import NdGrid,{Column,Editing,Popup,Paging,Scrolling,KeyboardNavigation,Lookup} from  '../core/react/devex/grid.js';
-import Form, { Label,Item,EmptyItem } from 'devextreme-react/form';
-import NdSelectBox from '../core/react/devex/selectbox.js';
 import NdButton from '../core/react/devex/button.js';
 import ScrollView from 'devextreme-react/scroll-view.js';
-import DropDownBox from 'devextreme-react/drop-down-box';
-import NdListBox from '../core/react/devex/listbox.js';
-import List from 'devextreme-react/list';
 import { datatable } from '../core/core.js';
 import NdDialog, { dialog } from '../core/react/devex/dialog.js';
 

@@ -6,6 +6,7 @@ class main
     constructor()
     {
         this.core = core.instance
+        this.userList = []
         
         this.connEvt = this.connEvt.bind(this)
         this.core.socket.on('connection',this.connEvt)
@@ -55,26 +56,52 @@ class main
         {
             if(typeof pParam.macid != 'undefined')
             {
-                console.log(pParam)
-                let tmpQuery = 
+                if(typeof pParam.version != 'undefined')
                 {
-                    query: `UPDATE LICENCE SET VERSION = @VERSION,REQUEST_DATE = @REQUEST_DATE WHERE MACID = @MACID AND STATUS = 1 AND DELETED = 0`,
-                    param: ['VERSION:string|50','REQUEST_DATE:datetime','MACID:string|50'],
-                    value: [pParam.version || '',moment(new Date()).format("YYYY-MM-DD HH:mm:ss"),pParam.macid]
-                }
+                    let tmpQuery = 
+                    {
+                        query: `UPDATE LICENCE SET VERSION = @VERSION,REQUEST_DATE = @REQUEST_DATE WHERE MACID = @MACID AND STATUS = 1 AND DELETED = 0`,
+                        param: ['VERSION:string|50','REQUEST_DATE:datetime','MACID:string|50'],
+                        value: [pParam.version || '',moment(new Date()).format("YYYY-MM-DD HH:mm:ss"),pParam.macid]
+                    }
 
-                let tmpResult = await this.core.sql.execute(tmpQuery)
+                    let tmpResult = await this.core.sql.execute(tmpQuery)
                 
-                if(tmpResult.result.err)
+                    if(tmpResult.result.err)
+                    {
+                        console.error("Lisans bilgisi güncellenirken hata:",tmpResult.result.err)
+                        pCallback({success:false,error:tmpResult.result.err})
+                        return
+                    }
+                }
+                if(typeof pParam.userList != 'undefined')
                 {
-                    console.error("Lisans bilgisi güncellenirken hata:",tmpResult.result.err)
-                    pCallback({success:false,error:tmpResult.result.err})
-                    return
+                    let existingUserIndex = this.userList.findIndex(u => u.macid === pParam.macid);
+
+                    if (existingUserIndex !== -1) 
+                    {
+                        this.userList[existingUserIndex] = {macid:pParam.macid,users:pParam.userList};
+                    } 
+                    else 
+                    {
+                        this.userList.push({macid:pParam.macid,users:pParam.userList});
+                    }
                 }
             }
             else
             {
                 console.error("MACID bilgisi eksik")
+            }
+        })
+        pSocket.on('piqhub-get-users',(pParam,pCallback) =>
+        {
+            if(typeof pParam?.macid != 'undefined')
+            {
+                pCallback(this.userList.find(u => u.macid === pParam.macid)?.users || undefined)
+            }
+            else
+            {
+                pCallback(this.userList)
             }
         })
     }
