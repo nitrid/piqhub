@@ -36,6 +36,7 @@ export default class NdTextArea extends Base
         return(
             <TextArea
             height={this.state.height}
+            readOnly={this.props.readOnly}
             value={typeof this.state.value == 'undefined' ? '' : this.state.value.toString()}
             valueChangeEvent={"keyup"}
             onValueChanged={this._onValueChanged}

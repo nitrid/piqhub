@@ -20,6 +20,12 @@ export const menu = (e) =>
             ]
         },
         {
+            id: 'version',
+            text: "Versiyonlar",
+            expanded: false,
+            path: 'versionList.js'
+        },
+        {
             id: 'watch',
             text: "İzleme",
             expanded: false,

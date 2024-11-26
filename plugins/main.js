@@ -1,12 +1,23 @@
 import {core} from 'gensrv'
 import {menuOff} from './menu/menuOff.js'
 import moment from 'moment'
+import fs from 'fs'
+import path from 'path'
+import { generateScripts, scriptEvents } from '../app/generate-sql.js';
+import express from 'express';
+import { fileURLToPath } from 'url';
+import multer from 'multer';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 class main
 {
     constructor()
     {
         this.core = core.instance
         this.userList = []
+        this.activeProcesses = {}
         
         this.connEvt = this.connEvt.bind(this)
         this.core.socket.on('connection',this.connEvt)
@@ -20,8 +31,50 @@ class main
             } 
             catch (error) 
             {
-                console.error('MenuOff hatası:', error);
-                res.status(500).json({ error: 'Menü yüklenirken hata oluştu' });
+                console.error('Error loading MenuOff:', error);
+                res.status(500).json({ error: 'Error occurred while loading the menu' });
+            }
+        });
+
+        this.core.app.use('/api/version', express.static(path.join(__dirname, '../version')));
+
+        const storage = multer.diskStorage(
+        {
+            destination: (req, file, cb) => 
+            {
+                const versionPath = path.join(__dirname, '../version', req.params.version);
+                if (!fs.existsSync(versionPath)) 
+                {
+                    fs.mkdirSync(versionPath, { recursive: true });
+                }
+                cb(null, versionPath);
+            },
+            filename: (req, file, cb) => 
+            {
+                cb(null, 'public.zip');
+            }
+        });
+
+        const upload = multer({ storage: storage });
+
+        this.core.app.post('/api/version/:version/upload', upload.single('file'), (req, res) => 
+        {
+            try 
+            {
+                if (!req.file) 
+                {
+                    throw new Error('No file uploaded');
+                }
+                res.json({ success: true });
+            } 
+            catch(error) 
+            {
+                console.error('Error uploading file:', error);
+                res.status(500).json(
+                { 
+                    success: false, 
+                    error: error.message 
+                });
             }
         });
 
@@ -69,7 +122,7 @@ class main
                 
                     if(tmpResult.result.err)
                     {
-                        console.error("Lisans bilgisi güncellenirken hata:",tmpResult.result.err)
+                        console.error("Error updating license information:",tmpResult.result.err)
                         pCallback({success:false,error:tmpResult.result.err})
                         return
                     }
@@ -90,7 +143,7 @@ class main
             }
             else
             {
-                console.error("MACID bilgisi eksik")
+                console.error("MACID information is missing")
             }
         })
         pSocket.on('piqhub-get-users',(pParam,pCallback) =>
@@ -104,10 +157,98 @@ class main
                 pCallback(this.userList)
             }
         })
+        pSocket.on('piqhub-gensc', async (pParam, pCallback) => 
+        {
+            if (typeof pParam?.version == 'undefined') 
+            {
+                pCallback({ success: false, error: 'Version parameter is required' });
+                return;
+            }
+
+            try 
+            {
+                const eventHandler = (data, eventType) => 
+                {
+                    if(eventType === 'complete') 
+                    {
+                        delete this.activeProcesses[pParam.version];
+                    }
+                    else 
+                    {
+                        this.activeProcesses[pParam.version] = {
+                            message: data.message,
+                            process: data.process,
+                            eventType: eventType
+                        };
+                    }
+                    
+                    this.core.socket.emit('script-progress', {
+                        version: pParam.version,
+                        message: data.message,
+                        process: data.process,
+                        eventType: eventType
+                    });
+                };
+
+                scriptEvents.on('start', (data) => eventHandler(data, 'start'));
+                scriptEvents.on('progress', (data) => eventHandler(data, 'progress'));
+                scriptEvents.on('error', (data) => eventHandler(data, 'error'));
+                scriptEvents.on('complete', (data) => eventHandler(data, 'complete'));
+
+                await generateScripts(pParam.version);
+
+                scriptEvents.removeAllListeners('start');
+                scriptEvents.removeAllListeners('progress');
+                scriptEvents.removeAllListeners('error');
+                scriptEvents.removeAllListeners('complete');
+
+                pCallback({ success: true });
+            } 
+            catch (error) 
+            {
+                console.error('Error in script generation:', error);
+                pCallback({ success: false, error: error.message });
+            }
+        });
+        pSocket.on('piqhub-delete-folder', async (pParam, pCallback) => 
+        {
+            if (typeof pParam?.path == 'undefined') 
+            {
+                pCallback({ success: false, error: 'Path parameter is required' });
+                return;
+            }
+
+            try 
+            {
+                const basePath = path.join(__dirname, '..');
+                const fullPath = path.join(basePath, pParam.path);
+
+                if (!fullPath.startsWith(basePath)) 
+                {
+                    pCallback({ success: false, error: 'Invalid path' });
+                    return;
+                }
+
+                if (!fs.existsSync(fullPath)) 
+                {
+                    pCallback({ success: false, error: 'Folder does not exist' });
+                    return;
+                }
+
+                fs.rmSync(fullPath, { recursive: true, force: true });
+
+                pCallback({ success: true, message: `Folder deleted successfully: ${pParam.path}` });
+            } 
+            catch (error) 
+            {
+                console.error('Error deleting folder:', error);
+                pCallback({ success: false, error: error.message });
+            }
+        });
     }
-    init()
+    async init()
     {
-        
+        //await generateScripts('1.0.15d');
     }
 }
 export const _main = new main()
