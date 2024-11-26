@@ -45,15 +45,19 @@ const DATA_TABLES =
     'VAT',
     'ZIPCODE'
 ];
+
+// Azure Storage Mount Path
+const versionPath = process.env.VERSION_PATH || path.join(__dirname, '../version');
+
 function ensureDirectoryExists(versionFolder) 
 {
-    const versionPath = path.join(__dirname, `../version/${versionFolder}`);
-    const dbPath = path.join(versionPath, 'db');
+    const fullPath = path.join(versionPath, versionFolder);
+    const dbPath = path.join(fullPath, 'db');
 
-    if (!fs.existsSync(versionPath)) 
+    if (!fs.existsSync(fullPath)) 
     {
         console.log(`Creating version folder: ${versionFolder}`);
-        fs.mkdirSync(versionPath, { recursive: true });
+        fs.mkdirSync(fullPath, { recursive: true });
     }
 
     if (!fs.existsSync(dbPath)) 
@@ -247,7 +251,7 @@ async function generateTableScripts(versionFolder)
         scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: `Completed processing: ${tableName}` });
     }
 
-    const filePath = path.join(__dirname, `../version/${versionFolder}/db/T.sql`);
+    const filePath = path.join(versionPath, versionFolder, 'db', 'T.sql');
     fs.writeFileSync(filePath, scripts);
     scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: 'Table scripts generation completed' });
 }
@@ -359,7 +363,7 @@ async function generateVFPI(versionFolder)
         });
     }
 
-    const filePath = path.join(__dirname, `../version/${versionFolder}/db/VFP.sql`);
+    const filePath = path.join(versionPath, versionFolder, 'db', 'VFP.sql');
     fs.writeFileSync(filePath, scripts);
     scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: 'VFPI scripts generation completed' });
 }
@@ -466,7 +470,7 @@ async function generateIndex(versionFolder)
         scripts += `END\nGO\n\n`;
     }
 
-    const filePath = path.join(__dirname, `../version/${versionFolder}/db/I.sql`);
+    const filePath = path.join(versionPath, versionFolder, 'db', 'I.sql');
     fs.writeFileSync(filePath, scripts);
     scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: 'Index scripts generation completed' });
 }

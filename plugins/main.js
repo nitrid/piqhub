@@ -36,18 +36,20 @@ class main
             }
         });
 
-        this.core.app.use('/api/version', express.static(path.join(__dirname, '../version')));
+        const versionPath = process.env.VERSION_PATH || path.join(__dirname, '../version');
+
+        this.core.app.use('/api/version', express.static(versionPath));
 
         const storage = multer.diskStorage(
         {
             destination: (req, file, cb) => 
             {
-                const versionPath = path.join(__dirname, '../version', req.params.version);
-                if (!fs.existsSync(versionPath)) 
+                const uploadPath = path.join(versionPath, req.params.version);
+                if (!fs.existsSync(uploadPath)) 
                 {
-                    fs.mkdirSync(versionPath, { recursive: true });
+                    fs.mkdirSync(uploadPath, { recursive: true });
                 }
-                cb(null, versionPath);
+                cb(null, uploadPath);
             },
             filename: (req, file, cb) => 
             {
