@@ -222,8 +222,7 @@ class main
 
             try 
             {
-                const basePath = path.join(__dirname, '..');
-                const fullPath = path.join(basePath, pParam.path);
+                const fullPath = path.join(process.env.VERSION_PATH || path.join(__dirname, '../version'), pParam.path);
 
                 if (!fullPath.startsWith(basePath)) 
                 {

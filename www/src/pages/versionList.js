@@ -278,7 +278,7 @@ export default class versionList extends React.Component
 
                                             this.core.socket.emit('piqhub-delete-folder', 
                                             { 
-                                                path: `version/${this.grdList.devGrid.getSelectedRowsData()[0].VERSION}` 
+                                                path: `/${this.grdList.devGrid.getSelectedRowsData()[0].VERSION}` 
                                             },
                                             (response) => 
                                             {
@@ -334,7 +334,7 @@ export default class versionList extends React.Component
                                 );
                             }}
                             />
-                            <Column caption={"FILE"} width={500}
+                            <Column caption={"ZIP FILE"} width={500}
                             cellRender={(e) => 
                             {
                                 return (
