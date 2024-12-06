@@ -239,7 +239,16 @@ class main
                     return;
                 }
 
-                fs.rmSync(fullPath, { recursive: true, force: true });
+                const files = fs.readdirSync(fullPath);
+                for (const file of files) {
+                    const curPath = path.join(fullPath, file);
+                    if (fs.lstatSync(curPath).isDirectory()) {
+                        fs.rmSync(curPath, { recursive: true, force: true });
+                    } else {
+                        fs.unlinkSync(curPath);
+                    }
+                }
+                fs.rmdirSync(fullPath);
 
                 pCallback({ success: true, message: `Folder deleted successfully: ${pParam.path}` });
             } 
