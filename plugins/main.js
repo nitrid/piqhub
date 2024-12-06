@@ -239,19 +239,7 @@ class main
                     return;
                 }
 
-                const deleteFolderRecursive = (folderPath) => {
-                    if (fs.existsSync(folderPath)) {
-                        fs.readdirSync(folderPath).forEach((file) => {
-                            const curPath = path.join(folderPath, file);
-                            if (fs.lstatSync(curPath).isDirectory()) {
-                                deleteFolderRecursive(curPath);
-                            } else {
-                                fs.unlinkSync(curPath);
-                            }
-                        });
-                        fs.rmdirSync(folderPath);
-                    }
-                };
+                fs.rmSync(fullPath, { recursive: true, force: true });
 
                 pCallback({ success: true, message: `Folder deleted successfully: ${pParam.path}` });
             } 
