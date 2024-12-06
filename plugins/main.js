@@ -11,6 +11,9 @@ import multer from 'multer';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const versionPath = process.env.VERSION_PATH || path.join(__dirname, '../version');
+const basePath = versionPath;
+
 class main
 {
     constructor()
@@ -222,7 +225,7 @@ class main
 
             try 
             {
-                const fullPath = path.join(process.env.VERSION_PATH || path.join(__dirname, '../version'), pParam.path);
+                const fullPath = path.join(basePath, pParam.path);
 
                 if (!fullPath.startsWith(basePath)) 
                 {
