@@ -40,8 +40,10 @@ class main
         });
 
         const versionPath = process.env.VERSION_PATH || path.join(__dirname, '../version');
+        const customersPath = process.env.CUSTOMERS_PATH || path.join(__dirname, '../customers');
 
         this.core.app.use('/api/version', express.static(versionPath));
+        this.core.app.use('/api/customers', express.static(customersPath));
 
         const storage = multer.diskStorage(
         {
