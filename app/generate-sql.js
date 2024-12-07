@@ -248,6 +248,7 @@ async function generateTableScripts(versionFolder)
         });
 
         scripts += `END\n\n`;
+        scripts += `GO\n\n`;
         scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: `Completed processing: ${tableName}` });
     }
 
