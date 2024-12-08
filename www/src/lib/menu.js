@@ -30,6 +30,12 @@ export const menu = (e) =>
             text: "İzleme",
             expanded: false,
             path: 'watchList.js'
+        },
+        {
+            id: 'update',
+            text: "Güncelleme",
+            expanded: false,
+            path: 'updateList.js'
         }
     ]
 }

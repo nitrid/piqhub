@@ -10,7 +10,6 @@ import NdPopUp from '../core/react/devex/popup.js';
 import NdTextBox from '../core/react/devex/textbox.js';
 import NdTextArea from '../core/react/devex/textarea.js';
 import JSZip from 'jszip';
-import path from 'path';
 
 export default class versionList extends React.Component
 {
@@ -128,7 +127,6 @@ export default class versionList extends React.Component
     {
         await this.dataObj.refresh();
         
-        // Her kayıt için SQL_SCRIPT kontrolü yap
         for(let i = 0; i < this.dataObj.length; i++)
         {
             this.dataObj[i].SQL_SCRIPT = await this.checkScriptFiles(this.dataObj[i].VERSION);
@@ -142,7 +140,6 @@ export default class versionList extends React.Component
         this.popSqlGenerate.version = pData.VERSION;        
         await this.popSqlGenerate.show();
         
-        // İşlem durumundaki mesajları göster
         if(this.state.processStatus[pData.VERSION]) 
         {
             this.txtPopSqlGenerate.value = this.state.processStatus[pData.VERSION].message;
@@ -167,10 +164,13 @@ export default class versionList extends React.Component
 
             try 
             {
-                this.setState(prevState => ({
-                    uploadStatus: {
+                this.setState(prevState => (
+                {
+                    uploadStatus: 
+                    {
                         ...prevState.uploadStatus,
-                        [pData.VERSION]: {
+                        [pData.VERSION]: 
+                        {
                             status: 'processing',
                             message: 'Dosyalar hazırlanıyor...',
                             progress: 0
@@ -198,25 +198,21 @@ export default class versionList extends React.Component
                 const zip = new JSZip();
                 const basePath = files[0].webkitRelativePath.split('/')[0];
 
-                // Toplam işlenecek dosya sayısını bul
                 const totalFiles = files.filter(file => 
                 {
                     const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
                     return includePaths.some(includePath => 
                     {
-                        // package.json için özel kontrol
                         if(includePath === 'package.json' || includePath === 'www/package.json')
                         {
                             return relativePath === 'package.json' || relativePath === 'www/package.json';
                         }
 
-                        // plugins/devprint/repx klasörünü hariç tut
                         if(relativePath.startsWith('plugins/devprint/repx'))
                         {
                             return false;
                         }
 
-                        // Klasörler için startsWith kullan
                         return relativePath.startsWith(includePath);
                     });
                 }).length;
@@ -228,43 +224,33 @@ export default class versionList extends React.Component
                     const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
                     const shouldInclude = includePaths.some(includePath => 
                     {
-                        // package.json için özel kontrol
                         if(includePath === 'package.json' || includePath === 'www/package.json')
                         {
                             return relativePath === 'package.json' || relativePath === 'www/package.json';
                         }
-
-                        // plugins/devprint/repx klasörünü hariç tut
                         if(relativePath.startsWith('plugins/devprint/repx'))
                         {
                             return false;
                         }
-
-                        // Klasörler için startsWith kullan
                         return relativePath.startsWith(includePath);
                     });
 
                     if(shouldInclude)
                     {
-                        // Zip içindeki yolu düzenle
                         let zipPath = relativePath;
                         
-                        // www ile başlayan yollar için www klasörünü koru
                         if(relativePath.startsWith('www/'))
                         {
-                            zipPath = relativePath;  // www/ prefix'ini koru
+                            zipPath = relativePath;
                         }
-                        // package.json için özel kontrol
                         else if(relativePath === 'package.json')
                         {
-                            zipPath = relativePath;  // kök dizinde bırak
+                            zipPath = relativePath;
                         }
-                        // www olmayan ama www içine alınması gereken dosyalar için
                         else if(relativePath.startsWith('public/'))
                         {
-                            zipPath = 'www/' + relativePath;  // www/ prefix'i ekle
+                            zipPath = 'www/' + relativePath;
                         }
-                        // Diğer dosyalar için yolu olduğu gibi bırak (node_modules vs.)
                         
                         const content = await file.arrayBuffer();
                         zip.file(zipPath, content);
@@ -272,10 +258,13 @@ export default class versionList extends React.Component
                         processedFiles++;
                         const progress = Math.round((processedFiles / totalFiles) * 100);
                         
-                        this.setState(prevState => ({
-                            uploadStatus: {
+                        this.setState(prevState => (
+                        {
+                            uploadStatus: 
+                            {
                                 ...prevState.uploadStatus,
-                                [pData.VERSION]: {
+                                [pData.VERSION]: 
+                                {
                                     status: 'processing',
                                     message: `Dosyalar zipleniyor... (${processedFiles}/${totalFiles})`,
                                     progress: progress
@@ -285,11 +274,13 @@ export default class versionList extends React.Component
                     }
                 }
 
-                // Zip oluşturma durumunu göster
-                this.setState(prevState => ({
-                    uploadStatus: {
+                this.setState(prevState => (
+                {
+                    uploadStatus: 
+                    {
                         ...prevState.uploadStatus,
-                        [pData.VERSION]: {
+                        [pData.VERSION]: 
+                        {
                             status: 'processing',
                             message: 'Zip dosyası oluşturuluyor...',
                             progress: 100
@@ -301,16 +292,20 @@ export default class versionList extends React.Component
                 const formData = new FormData();
                 formData.append('file', zipContent, 'public.zip');
 
-                // Upload işlemi için XMLHttpRequest kullan
                 const xhr = new XMLHttpRequest();
 
-                xhr.upload.onprogress = (event) => {
-                    if (event.lengthComputable) {
+                xhr.upload.onprogress = (event) => 
+                {
+                    if (event.lengthComputable) 
+                    {
                         const uploadProgress = Math.round((event.loaded / event.total) * 100);
-                        this.setState(prevState => ({
-                            uploadStatus: {
+                        this.setState(prevState => (
+                        {
+                            uploadStatus: 
+                            {
                                 ...prevState.uploadStatus,
-                                [pData.VERSION]: {
+                                [pData.VERSION]: 
+                                {
                                     status: 'processing',
                                     message: `Dosya yükleniyor...`,
                                     progress: uploadProgress
@@ -320,22 +315,30 @@ export default class versionList extends React.Component
                     }
                 };
 
-                // Promise içinde XMLHttpRequest kullan
-                const uploadResult = await new Promise((resolve, reject) => {
-                    xhr.onload = () => {
-                        if (xhr.status === 200) {
-                            try {
+                const uploadResult = await new Promise((resolve, reject) => 
+                {
+                    xhr.onload = () => 
+                    {
+                        if (xhr.status === 200) 
+                        {
+                            try 
+                            {
                                 const response = JSON.parse(xhr.responseText);
                                 resolve(response);
-                            } catch (error) {
+                            } 
+                            catch (error) 
+                            {
                                 reject(new Error('Invalid response format'));
                             }
-                        } else {
+                        } 
+                        else 
+                        {
                             reject(new Error(`Upload failed with status: ${xhr.status}`));
                         }
                     };
 
-                    xhr.onerror = () => {
+                    xhr.onerror = () => 
+                    {
                         reject(new Error('Network error occurred'));
                     };
 
@@ -345,11 +348,13 @@ export default class versionList extends React.Component
 
                 if(uploadResult.success) 
                 {
-                    // Upload başarılı durumunu göster
-                    this.setState(prevState => ({
-                        uploadStatus: {
+                    this.setState(prevState => (
+                    {
+                        uploadStatus: 
+                        {
                             ...prevState.uploadStatus,
-                            [pData.VERSION]: {
+                            [pData.VERSION]: 
+                            {
                                 status: 'completed',
                                 message: 'Yükleme tamamlandı',
                                 progress: 100
@@ -379,11 +384,13 @@ export default class versionList extends React.Component
             }
             catch(error) 
             {
-                // Hata durumunu göster
-                this.setState(prevState => ({
-                    uploadStatus: {
+                this.setState(prevState => (
+                {
+                    uploadStatus: 
+                    {
                         ...prevState.uploadStatus,
-                        [pData.VERSION]: {
+                        [pData.VERSION]: 
+                        {
                             status: 'error',
                             message: `Hata: ${error.message}`,
                             progress: 0

@@ -89,6 +89,32 @@ class main
     }
     connEvt(pSocket)
     {
+        // Socket bağlantısı koptuğunda çalışacak event
+        pSocket.on('disconnect', () => 
+        {
+            if(pSocket.handshake.query.macId)
+            {
+                const macId = pSocket.handshake.query.macId;
+                this.userList = this.userList.filter(u => u.macid !== macId);
+            }
+        });
+
+        // MACID ile gelen bağlantıları userList'e ekle
+        if(pSocket.handshake.query.macId)
+        {
+            const macId = pSocket.handshake.query.macId;
+            
+            let existingUserIndex = this.userList.findIndex(u => u.macid === macId);
+            if (existingUserIndex !== -1) 
+            {
+                this.userList[existingUserIndex].socket = pSocket;
+            } 
+            else 
+            {
+                this.userList.push({macid: macId,users: [],socket: pSocket});
+            }
+        }
+
         pSocket.on('piqhub-get-licence',async (pParam,pCallback) =>
         {
             if(typeof pParam.macid != 'undefined')
@@ -137,14 +163,14 @@ class main
                 if(typeof pParam.userList != 'undefined')
                 {
                     let existingUserIndex = this.userList.findIndex(u => u.macid === pParam.macid);
-
                     if (existingUserIndex !== -1) 
                     {
-                        this.userList[existingUserIndex] = {macid:pParam.macid,users:pParam.userList};
+                        this.userList[existingUserIndex].users = pParam.userList;
+                        this.userList[existingUserIndex].socket = pSocket;
                     } 
                     else 
                     {
-                        this.userList.push({macid:pParam.macid,users:pParam.userList});
+                        this.userList.push({macid: pParam.macid,users: pParam.userList,socket: pSocket});
                     }
                 }
             }
@@ -157,11 +183,13 @@ class main
         {
             if(typeof pParam?.macid != 'undefined')
             {
-                pCallback(this.userList.find(u => u.macid === pParam.macid)?.users || undefined)
+                let user = this.userList.find(u => u.macid === pParam.macid);
+                pCallback(user ? user.users : undefined);
             }
             else
             {
-                pCallback(this.userList)
+                let filteredList = this.userList.map(u => ({macid: u.macid,users: u.users}));
+                pCallback(filteredList);
             }
         })
         pSocket.on('piqhub-gensc', async (pParam, pCallback) => 
@@ -242,11 +270,15 @@ class main
                 }
 
                 const files = fs.readdirSync(fullPath);
-                for (const file of files) {
+                for (const file of files) 
+                {
                     const curPath = path.join(fullPath, file);
-                    if (fs.lstatSync(curPath).isDirectory()) {
+                    if (fs.lstatSync(curPath).isDirectory()) 
+                    {
                         fs.rmSync(curPath, { recursive: true, force: true });
-                    } else {
+                    } 
+                    else 
+                    {
                         fs.unlinkSync(curPath);
                     }
                 }
@@ -258,6 +290,70 @@ class main
             {
                 console.error('Error deleting folder:', error);
                 pCallback({ success: false, error: error.message });
+            }
+        });
+        pSocket.on('piqhub-db-update', async (pParam, pCallback) => 
+        {
+            if(typeof pParam?.macid != 'undefined')
+            {
+                let client = this.userList.find(u => u.macid === pParam.macid);
+                if(client && client.socket)
+                {
+                    client.socket.emit('updateDatabase', pParam.version);
+
+                    client.socket.on('updateDatabaseProgress', (progress) => 
+                    {
+                        this.core.socket.emit('db-update-progress', 
+                        {
+                            macid: pParam.macid,
+                            status: progress.status,
+                            message: `${progress.file}`,
+                            progress: progress.progress
+                        });
+                    });
+
+                    pCallback({ success: true });
+                }
+                else
+                {
+                    pCallback({ success: false, error: 'Client not connected' });
+                }
+            }
+            else
+            {
+                pCallback({ success: false, error: 'MACID is required' });
+            }
+        });
+        pSocket.on('piqhub-app-update', async (pParam, pCallback) => 
+        {
+            if(typeof pParam?.macid != 'undefined')
+            {
+                let client = this.userList.find(u => u.macid === pParam.macid);
+                if(client && client.socket)
+                {
+                    client.socket.emit('updateApp', pParam.version);
+
+                    client.socket.on('updateAppProgress', (progress) => 
+                    {
+                        this.core.socket.emit('app-update-progress', 
+                        {
+                            macid: pParam.macid,
+                            status: progress.status,
+                            message: progress.file,
+                            progress: progress.progress
+                        });
+                    });
+
+                    pCallback({ success: true });
+                }
+                else
+                {
+                    pCallback({ success: false, error: 'Client not connected' });
+                }
+            }
+            else
+            {
+                pCallback({ success: false, error: 'MACID is required' });
             }
         });
     }
