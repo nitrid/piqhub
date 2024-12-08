@@ -9,6 +9,8 @@ import NdDialog, { dialog } from '../core/react/devex/dialog.js';
 import NdPopUp from '../core/react/devex/popup.js';
 import NdTextBox from '../core/react/devex/textbox.js';
 import NdTextArea from '../core/react/devex/textarea.js';
+import JSZip from 'jszip';
+import path from 'path';
 
 export default class versionList extends React.Component
 {
@@ -43,7 +45,8 @@ export default class versionList extends React.Component
 
         this.state = 
         {
-            processStatus: {}
+            processStatus: {},
+            uploadStatus: {}
         }
     }
     componentDidMount()
@@ -149,50 +152,206 @@ export default class versionList extends React.Component
             this.txtPopSqlGenerate.value = '';
         }
     }
-    btnUpload(pData)
+    async btnUpload(pData)
     {
-        const fileInput = document.createElement('input');
-        fileInput.type = 'file';
-        fileInput.accept = '.zip';
-        fileInput.style.display = 'none';
+        const dirInput = document.createElement('input');
+        dirInput.type = 'file';
+        dirInput.webkitdirectory = true;
+        dirInput.directory = true;
+        dirInput.style.display = 'none';
         
-        fileInput.onchange = async (e) => 
+        dirInput.onchange = async (e) => 
         {
-            const file = e.target.files[0];
-            if(!file) return;
-            
-            if(!file.name.toLowerCase().endsWith('.zip')) 
-            {
-                let tmpConfObj = 
-                {
-                    id:'msgError',
-                    showTitle:true,
-                    title:"Hata",
-                    showCloseButton:true,
-                    width:'500px',
-                    height:'200px',
-                    button:[{id:"btn01",caption:"Tamam",location:'after'}],
-                    content:(<div style={{textAlign:"center",fontSize:"20px"}}>{"Lütfen .zip uzantılı dosya seçiniz!"}</div>)
-                }
-                await dialog(tmpConfObj);
-                return;
-            }
+            const files = Array.from(e.target.files);
+            if(files.length === 0) return;
 
             try 
             {
+                this.setState(prevState => ({
+                    uploadStatus: {
+                        ...prevState.uploadStatus,
+                        [pData.VERSION]: {
+                            status: 'processing',
+                            message: 'Dosyalar hazırlanıyor...',
+                            progress: 0
+                        }
+                    }
+                }));
+
+                const includePaths = 
+                [
+                    'www/public', 
+                    'www/package.json',
+                    'node_modules',
+                    'doc',
+                    'plugins',
+                    'setup',
+                    '.gitattributes',
+                    '.gitignore',
+                    'doc.md',
+                    'package.json',
+                    'pem.js',
+                    'piqhub.js',
+                    'server.js',
+                    'terminal.js'
+                ];
+                const zip = new JSZip();
+                const basePath = files[0].webkitRelativePath.split('/')[0];
+
+                // Toplam işlenecek dosya sayısını bul
+                const totalFiles = files.filter(file => 
+                {
+                    const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
+                    return includePaths.some(includePath => 
+                    {
+                        // Eğer dosya yolu package.json ise tam eşleşme ara
+                        if(includePath === 'www/package.json')
+                        {
+                            return relativePath === includePath;
+                        }
+
+                        // plugins/devprint/repx klasörünü hariç tut
+                        if(relativePath.startsWith('plugins/devprint/repx'))
+                        {
+                            return false;
+                        }
+
+                        // Klasörler için startsWith kullan
+                        return relativePath.startsWith(includePath);
+                    });
+                }).length;
+
+                let processedFiles = 0;
+
+                for(const file of files)
+                {
+                    const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
+                    const shouldInclude = includePaths.some(includePath => 
+                    {
+                        // Eğer dosya yolu package.json ise tam eşleşme ara
+                        if(includePath === 'www/package.json')
+                        {
+                            return relativePath === includePath;
+                        }
+
+                        // plugins/devprint/repx klasörünü hariç tut
+                        if(relativePath.startsWith('plugins/devprint/repx'))
+                        {
+                            return false;
+                        }
+
+                        // Klasörler için startsWith kullan
+                        return relativePath.startsWith(includePath);
+                    });
+
+                    if(shouldInclude)
+                    {
+                        // Zip içindeki yolu düzenle
+                        let zipPath = relativePath;
+                        
+                        // www ile başlayan yollar için www klasörünü koru
+                        if(relativePath.startsWith('www/'))
+                        {
+                            zipPath = relativePath;  // www/ prefix'ini koru
+                        }
+                        // www olmayan ama www içine alınması gereken dosyalar için
+                        else if(relativePath === 'package.json' || relativePath.startsWith('public/'))
+                        {
+                            zipPath = 'www/' + relativePath;  // www/ prefix'i ekle
+                        }
+                        // Diğer dosyalar için yolu olduğu gibi bırak (node_modules vs.)
+                        
+                        const content = await file.arrayBuffer();
+                        zip.file(zipPath, content);
+                        
+                        processedFiles++;
+                        const progress = Math.round((processedFiles / totalFiles) * 100);
+                        
+                        this.setState(prevState => ({
+                            uploadStatus: {
+                                ...prevState.uploadStatus,
+                                [pData.VERSION]: {
+                                    status: 'processing',
+                                    message: `Dosyalar zipleniyor... (${processedFiles}/${totalFiles})`,
+                                    progress: progress
+                                }
+                            }
+                        }));
+                    }
+                }
+
+                // Zip oluşturma durumunu göster
+                this.setState(prevState => ({
+                    uploadStatus: {
+                        ...prevState.uploadStatus,
+                        [pData.VERSION]: {
+                            status: 'processing',
+                            message: 'Zip dosyası oluşturuluyor...',
+                            progress: 100
+                        }
+                    }
+                }));
+
+                const zipContent = await zip.generateAsync({type: 'blob'});
                 const formData = new FormData();
-                formData.append('file', file);
+                formData.append('file', zipContent, 'public.zip');
 
-                const response = await fetch(`/api/version/${pData.VERSION}/upload`, 
-                {
-                    method: 'POST',
-                    body: formData
+                // Upload işlemi için XMLHttpRequest kullan
+                const xhr = new XMLHttpRequest();
+
+                xhr.upload.onprogress = (event) => {
+                    if (event.lengthComputable) {
+                        const uploadProgress = Math.round((event.loaded / event.total) * 100);
+                        this.setState(prevState => ({
+                            uploadStatus: {
+                                ...prevState.uploadStatus,
+                                [pData.VERSION]: {
+                                    status: 'processing',
+                                    message: `Dosya yükleniyor...`,
+                                    progress: uploadProgress
+                                }
+                            }
+                        }));
+                    }
+                };
+
+                // Promise içinde XMLHttpRequest kullan
+                const uploadResult = await new Promise((resolve, reject) => {
+                    xhr.onload = () => {
+                        if (xhr.status === 200) {
+                            try {
+                                const response = JSON.parse(xhr.responseText);
+                                resolve(response);
+                            } catch (error) {
+                                reject(new Error('Invalid response format'));
+                            }
+                        } else {
+                            reject(new Error(`Upload failed with status: ${xhr.status}`));
+                        }
+                    };
+
+                    xhr.onerror = () => {
+                        reject(new Error('Network error occurred'));
+                    };
+
+                    xhr.open('POST', `/api/version/${pData.VERSION}/upload`);
+                    xhr.send(formData);
                 });
-                
-                const result = await response.json();
 
-                if(result.success) 
+                if(uploadResult.success) 
                 {
+                    // Upload başarılı durumunu göster
+                    this.setState(prevState => ({
+                        uploadStatus: {
+                            ...prevState.uploadStatus,
+                            [pData.VERSION]: {
+                                status: 'completed',
+                                message: 'Yükleme tamamlandı',
+                                progress: 100
+                            }
+                        }
+                    }));
+
                     let tmpConfObj = 
                     {
                         id:'msgSuccess',
@@ -202,7 +361,7 @@ export default class versionList extends React.Component
                         width:'500px',
                         height:'200px',
                         button:[{id:"btn01",caption:"Tamam",location:'after'}],
-                        content:(<div style={{textAlign:"center",fontSize:"20px"}}>{"Dosya başarıyla yüklendi."}</div>)
+                        content:(<div style={{textAlign:"center",fontSize:"20px"}}>{"Dosyalar başarıyla yüklendi."}</div>)
                     }
                     await dialog(tmpConfObj);
                     
@@ -210,11 +369,23 @@ export default class versionList extends React.Component
                 }
                 else 
                 {
-                    throw new Error(result.error);
+                    throw new Error(uploadResult.error);
                 }
             }
             catch(error) 
             {
+                // Hata durumunu göster
+                this.setState(prevState => ({
+                    uploadStatus: {
+                        ...prevState.uploadStatus,
+                        [pData.VERSION]: {
+                            status: 'error',
+                            message: `Hata: ${error.message}`,
+                            progress: 0
+                        }
+                    }
+                }));
+
                 console.error('Error uploading file:', error);
                 let tmpConfObj = 
                 {
@@ -231,12 +402,12 @@ export default class versionList extends React.Component
             }
             finally 
             {
-                document.body.removeChild(fileInput);
+                document.body.removeChild(dirInput);
             }
         };
 
-        document.body.appendChild(fileInput);
-        fileInput.click();
+        document.body.appendChild(dirInput);
+        dirInput.click();
     }
     render()
     {
@@ -337,6 +508,23 @@ export default class versionList extends React.Component
                             <Column caption={"ZIP FILE"} width={500}
                             cellRender={(e) => 
                             {
+                                // Upload durumunu kontrol et
+                                const uploadStatus = this.state.uploadStatus[e.data.VERSION];
+                                if(uploadStatus)
+                                {
+                                    if(uploadStatus.status === 'processing')
+                                    {
+                                        return (
+                                            <div>
+                                                <i className="dx-icon-running" style={{color: 'blue'}} />
+                                                <span style={{marginLeft: '5px'}}>
+                                                    {uploadStatus.message} ({uploadStatus.progress}%)
+                                                </span>
+                                            </div>
+                                        );
+                                    }
+                                }
+
                                 return (
                                     <div>
                                         <i className={e.data.FILE ? "dx-icon-check" : "dx-icon-close"} 
