@@ -204,10 +204,10 @@ export default class versionList extends React.Component
                     const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
                     return includePaths.some(includePath => 
                     {
-                        // Eğer dosya yolu package.json ise tam eşleşme ara
-                        if(includePath === 'www/package.json')
+                        // package.json için özel kontrol
+                        if(includePath === 'package.json' || includePath === 'www/package.json')
                         {
-                            return relativePath === includePath;
+                            return relativePath === 'package.json' || relativePath === 'www/package.json';
                         }
 
                         // plugins/devprint/repx klasörünü hariç tut
@@ -228,10 +228,10 @@ export default class versionList extends React.Component
                     const relativePath = file.webkitRelativePath.substring(basePath.length + 1);
                     const shouldInclude = includePaths.some(includePath => 
                     {
-                        // Eğer dosya yolu package.json ise tam eşleşme ara
-                        if(includePath === 'www/package.json')
+                        // package.json için özel kontrol
+                        if(includePath === 'package.json' || includePath === 'www/package.json')
                         {
-                            return relativePath === includePath;
+                            return relativePath === 'package.json' || relativePath === 'www/package.json';
                         }
 
                         // plugins/devprint/repx klasörünü hariç tut
@@ -254,8 +254,13 @@ export default class versionList extends React.Component
                         {
                             zipPath = relativePath;  // www/ prefix'ini koru
                         }
+                        // package.json için özel kontrol
+                        else if(relativePath === 'package.json')
+                        {
+                            zipPath = relativePath;  // kök dizinde bırak
+                        }
                         // www olmayan ama www içine alınması gereken dosyalar için
-                        else if(relativePath === 'package.json' || relativePath.startsWith('public/'))
+                        else if(relativePath.startsWith('public/'))
                         {
                             zipPath = 'www/' + relativePath;  // www/ prefix'i ekle
                         }
