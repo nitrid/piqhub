@@ -89,6 +89,18 @@ class main
     }
     connEvt(pSocket)
     {
+        // Socket bağlantısı kurulduğunda çalışacak event
+        pSocket.on('connect', () => 
+        {
+            if(pSocket.handshake.query.macId)
+            {
+                console.log('Yeni bir socket bağlantısı kuruldu. MACID:', pSocket.handshake.query.macId);
+            }
+            else
+            {
+                console.log('Yeni bir socket bağlantısı kuruldu. MACID bulunamadı.');
+            }
+        });
         // Socket bağlantısı koptuğunda çalışacak event
         pSocket.on('disconnect', () => 
         {
