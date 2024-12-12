@@ -106,6 +106,7 @@ class main
         {
             if(pSocket.handshake.query.macId)
             {
+                console.log('Socket bağlantısı koptu. MACID:', pSocket.handshake.query.macId);
                 const macId = pSocket.handshake.query.macId;
                 this.userList = this.userList.filter(u => u.macid !== macId);
             }
