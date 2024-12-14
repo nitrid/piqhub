@@ -517,8 +517,8 @@ export async function generateScripts(versionFolder)
         ensureDirectoryExists(versionFolder);
         scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: 'Database connection established' });
 
-        //await generateTableScripts(versionFolder);
-        //await generateVFPI(versionFolder);
+        await generateTableScripts(versionFolder);
+        await generateVFPI(versionFolder);
         await generateIndex(versionFolder);
         
         scriptEvents.emit('complete', { process: 'SQL-SCRIPT', message: 'Script generation completed successfully' });
