@@ -380,6 +380,7 @@ async function generateIndex(versionFolder)
         i.type_desc AS index_type,
         i.is_unique,
         i.fill_factor,
+        i.filter_definition,
         (
             SELECT STRING_AGG(c.name, ', ')
             FROM sys.index_columns ic
@@ -450,9 +451,10 @@ async function generateIndex(versionFolder)
         const includedColumns = row.included_columns ? row.included_columns.split(',').map(col => `[${col.trim()}]`).join(', ') : '';
         const fillFactor = row.fill_factor > 0 ? ` WITH (FILLFACTOR = ${row.fill_factor})` : '';
         const include = includedColumns ? ` INCLUDE (${includedColumns})` : '';
+        const filter = row.filter_definition ? ` WHERE ${row.filter_definition}` : '';
 
         scripts += `DROP INDEX IF EXISTS ${indexName} ON ${tableName};\nGO\n\n`;
-        scripts += `CREATE INDEX ${indexName} ON ${tableName} (${keyColumns})${include}${fillFactor};\nGO\n\n`;
+        scripts += `CREATE INDEX ${indexName} ON ${tableName} (${keyColumns})${include}${filter}${fillFactor};\nGO\n\n`;
     }
 
     const uniqueIndexResult = await execute(uniqueIndexQuery);
