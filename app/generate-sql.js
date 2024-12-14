@@ -375,14 +375,17 @@ async function generateIndex(versionFolder)
 
     const normalIndexQuery = `
     SELECT
+        SCHEMA_NAME(t.schema_id) as schema_name,
         t.name AS table_name,
         i.name AS index_name,
         i.type_desc AS index_type,
         i.is_unique,
         i.fill_factor,
         i.filter_definition,
+        i.ignore_dup_key,
+        i.optimize_for_sequential_key,
         (
-            SELECT STRING_AGG(c.name, ', ')
+            SELECT STRING_AGG(c.name + ' ' + CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END, ', ')
             FROM sys.index_columns ic
             JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
             WHERE ic.object_id = i.object_id 
@@ -410,13 +413,15 @@ async function generateIndex(versionFolder)
 
     const uniqueIndexQuery = `
     SELECT
+        SCHEMA_NAME(t.schema_id) as schema_name,
         t.name AS table_name,
         i.name AS index_name,
         i.type_desc AS index_type,
         i.is_unique,
         i.fill_factor,
+        i.filter_definition,
         (
-            SELECT STRING_AGG(c.name, ', ')
+            SELECT STRING_AGG(c.name + ' ' + CASE WHEN ic.is_descending_key = 1 THEN 'DESC' ELSE 'ASC' END, ', ')
             FROM sys.index_columns ic
             JOIN sys.columns c ON ic.object_id = c.object_id AND ic.column_id = c.column_id
             WHERE ic.object_id = i.object_id 
@@ -445,31 +450,50 @@ async function generateIndex(versionFolder)
     const normalIndexResult = await execute(normalIndexQuery);
     for (const row of normalIndexResult.recordset) 
     {
-        const tableName = `[${row.table_name}]`;
+        const schemaName = row.schema_name || 'dbo';
+        const tableName = `[${schemaName}].[${row.table_name}]`;
         const indexName = `[${row.index_name}]`;
-        const keyColumns = row.key_columns ? row.key_columns.split(',').map(col => `[${col.trim()}]`).join(', ') : '';
+        const keyColumns = row.key_columns || '';
         const includedColumns = row.included_columns ? row.included_columns.split(',').map(col => `[${col.trim()}]`).join(', ') : '';
-        const fillFactor = row.fill_factor > 0 ? ` WITH (FILLFACTOR = ${row.fill_factor})` : '';
-        const include = includedColumns ? ` INCLUDE (${includedColumns})` : '';
-        const filter = row.filter_definition ? ` WHERE ${row.filter_definition}` : '';
+        const filter = row.filter_definition ? `\nWHERE ${row.filter_definition}` : '';
+        
+        const withOptions = [];
+        if(row.fill_factor > 0) withOptions.push(`FILLFACTOR = ${row.fill_factor}`);
+        withOptions.push('STATISTICS_NORECOMPUTE = OFF');
+        withOptions.push('DROP_EXISTING = OFF');
+        withOptions.push('ONLINE = OFF');
+        withOptions.push('OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF');
+        
+        const withClause = withOptions.length > 0 ? `\nWITH (${withOptions.join(', ')})` : '';
+        const include = includedColumns ? `\nINCLUDE (${includedColumns})` : '';
 
         scripts += `DROP INDEX IF EXISTS ${indexName} ON ${tableName};\nGO\n\n`;
-        scripts += `CREATE INDEX ${indexName} ON ${tableName} (${keyColumns})${include}${filter}${fillFactor};\nGO\n\n`;
+        scripts += `CREATE NONCLUSTERED INDEX ${indexName} ON ${tableName}\n(\n\t${keyColumns}\n)${include}${filter}${withClause} ON [PRIMARY];\nGO\n\n`;
     }
 
     const uniqueIndexResult = await execute(uniqueIndexQuery);
     for (const row of uniqueIndexResult.recordset) 
     {
-        const tableName = `[${row.table_name}]`;
+        const schemaName = row.schema_name || 'dbo';
+        const tableName = `[${schemaName}].[${row.table_name}]`;
         const indexName = `[${row.index_name}]`;
-        const keyColumns = row.key_columns ? row.key_columns.split(',').map(col => `[${col.trim()}]`).join(', ') : '';
+        const keyColumns = row.key_columns || '';
         const includedColumns = row.included_columns ? row.included_columns.split(',').map(col => `[${col.trim()}]`).join(', ') : '';
-        const fillFactor = row.fill_factor > 0 ? ` WITH (FILLFACTOR = ${row.fill_factor})` : '';
-        const include = includedColumns ? ` INCLUDE (${includedColumns})` : '';
+        const filter = row.filter_definition ? `\nWHERE ${row.filter_definition}` : '';
+        
+        const withOptions = [];
+        if(row.fill_factor > 0) withOptions.push(`FILLFACTOR = ${row.fill_factor}`);
+        withOptions.push('STATISTICS_NORECOMPUTE = OFF');
+        withOptions.push('DROP_EXISTING = OFF');
+        withOptions.push('ONLINE = OFF');
+        withOptions.push('OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF');
+        
+        const withClause = withOptions.length > 0 ? `\nWITH (${withOptions.join(', ')})` : '';
+        const include = includedColumns ? `\nINCLUDE (${includedColumns})` : '';
 
         scripts += `IF NOT EXISTS (SELECT * FROM sys.indexes WHERE name = '${row.index_name}' AND object_id = OBJECT_ID('${row.table_name}'))\n`;
         scripts += `BEGIN\n`;
-        scripts += `    CREATE UNIQUE INDEX ${indexName} ON ${tableName} (${keyColumns})${include}${fillFactor};\n`;
+        scripts += `    CREATE UNIQUE NONCLUSTERED INDEX ${indexName} ON ${tableName}\n    (\n\t${keyColumns}\n    )${include}${filter}${withClause} ON [PRIMARY];\n`;
         scripts += `END\nGO\n\n`;
     }
 
@@ -493,8 +517,8 @@ export async function generateScripts(versionFolder)
         ensureDirectoryExists(versionFolder);
         scriptEvents.emit('progress', { process: 'SQL-SCRIPT', message: 'Database connection established' });
 
-        await generateTableScripts(versionFolder);
-        await generateVFPI(versionFolder);
+        //await generateTableScripts(versionFolder);
+        //await generateVFPI(versionFolder);
         await generateIndex(versionFolder);
         
         scriptEvents.emit('complete', { process: 'SQL-SCRIPT', message: 'Script generation completed successfully' });
